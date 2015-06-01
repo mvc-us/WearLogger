@@ -4,16 +4,14 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
-import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.TextView;
 
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 
 public class MainActivity extends Activity {
 
@@ -24,10 +22,10 @@ public class MainActivity extends Activity {
             Sensor.TYPE_GYROSCOPE,
     };
 
-    private TextView mTextView;
-    private SensorDataCollector sensorEventListener;
+    private SensorDataCollector[] sensorEventListeners = new SensorDataCollector[TARGET_SENSORS.length];
     private TextView textSensor;
     private FileOutputStream fos;
+    private Switch inChairSwitch;
 
 
     @Override
@@ -35,14 +33,20 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         textSensor = (TextView) findViewById(R.id.textViewSensor);
-        sensorEventListener = new SensorDataCollector(this, textSensor);
+        for (int i = 0; i < TARGET_SENSORS.length; i++) {
+            SensorDataCollector sensorEventListener = new SensorDataCollector(this, textSensor, TARGET_SENSORS[i]);
+            sensorEventListeners[i] = sensorEventListener;
+        }
+
         initSwitch();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        sensorEventListener.flushBuffer();
+        for(SensorDataCollector s : sensorEventListeners) {
+            s.flushBuffer();
+        }
     }
 
     @Override
@@ -59,16 +63,29 @@ public class MainActivity extends Activity {
     private void startLogging() {
         SensorManager sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
-        for (int type: TARGET_SENSORS) {
+        for (int i=0; i < TARGET_SENSORS.length; i++) {
+            int type = TARGET_SENSORS[i];
             Sensor s = sensorManager.getDefaultSensor(type);
-            sensorManager.registerListener(sensorEventListener, s, SensorManager.SENSOR_DELAY_FASTEST);
+            sensorEventListeners[i].startLog();
+            sensorManager.registerListener(sensorEventListeners[i], s, SensorManager.SENSOR_DELAY_FASTEST);
 //            sensorManager.registerListener(sensorEventListener, s, SensorManager.SENSOR_DELAY_UI);
         }
     }
 
     private void stopLogging() {
         SensorManager sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        sensorManager.unregisterListener(sensorEventListener);
+        for(SensorDataCollector sensorEventListener : sensorEventListeners) {
+            sensorEventListener.endLog();
+            sensorManager.unregisterListener(sensorEventListener);
+        }
+    }
+
+    public void onResetClicked(View v) {
+        inChairSwitch.setChecked(false);
+        for(SensorDataCollector sensorEventListener : sensorEventListeners) {
+            if (sensorEventListener != null) stopLogging();
+            sensorEventListener.clearFile();
+        }
     }
 
     private void updateLoggingStatus(boolean logging) {
@@ -80,7 +97,6 @@ public class MainActivity extends Activity {
     }
 
     protected boolean updatePref(String key, boolean value) {
-        // update heating or cooling
         SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
                 PREF_FILE_KEY, Context.MODE_PRIVATE);
         SharedPreferences.Editor e = sharedPref.edit();
@@ -93,7 +109,7 @@ public class MainActivity extends Activity {
 //        SharedPreferences sharedPref = this.getSharedPreferences(
 //                getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 //        boolean logging = sharedPref.getBoolean(getString(R.string.logging), false);
-        Switch inChairSwitch = (Switch) findViewById(R.id.switch1);
+        inChairSwitch = (Switch) findViewById(R.id.switch1);
         boolean logging = false;
         inChairSwitch.setChecked(logging);
         inChairSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
