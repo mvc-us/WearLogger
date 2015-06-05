@@ -11,11 +11,10 @@ import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.TextView;
 
-import java.io.FileOutputStream;
-
 public class MainActivity extends Activity {
 
     static final String PREF_FILE_KEY = "stored_preferences";
+    private static final String PREF_NUM_TRAINING_POINTS = "num_training_points";
 
     public static final int[] TARGET_SENSORS = {
             Sensor.TYPE_LINEAR_ACCELERATION,
@@ -24,8 +23,10 @@ public class MainActivity extends Activity {
 
     private SensorDataCollector[] sensorEventListeners = new SensorDataCollector[TARGET_SENSORS.length];
     private TextView textSensor;
-    private FileOutputStream fos;
-    private Switch inChairSwitch;
+    private Switch loggingSwitch;
+    private Switch classifySwitch;
+    private boolean classify;
+    private int numTrainingPoints;
 
 
     @Override
@@ -37,8 +38,9 @@ public class MainActivity extends Activity {
             SensorDataCollector sensorEventListener = new SensorDataCollector(this, textSensor, TARGET_SENSORS[i]);
             sensorEventListeners[i] = sensorEventListener;
         }
-
-        initSwitch();
+        classify = false;
+        initSwitches();
+        numTrainingPoints = getSharedPreferences(PREF_FILE_KEY, MODE_PRIVATE).getInt(PREF_NUM_TRAINING_POINTS, 0);
     }
 
     @Override
@@ -81,7 +83,7 @@ public class MainActivity extends Activity {
     }
 
     public void onResetClicked(View v) {
-        inChairSwitch.setChecked(false);
+        loggingSwitch.setChecked(false);
         for(SensorDataCollector sensorEventListener : sensorEventListeners) {
             if (sensorEventListener != null) stopLogging();
             sensorEventListener.clearFile();
@@ -96,29 +98,31 @@ public class MainActivity extends Activity {
         }
     }
 
-    protected boolean updatePref(String key, boolean value) {
+    protected boolean updatePref(String key, int value) {
         SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
                 PREF_FILE_KEY, Context.MODE_PRIVATE);
         SharedPreferences.Editor e = sharedPref.edit();
-        e.putBoolean(key, value);
+        e.putInt(key, value);
         e.apply();
         return e.commit();
     }
 
-    protected void initSwitch() {
-//        SharedPreferences sharedPref = this.getSharedPreferences(
-//                getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-//        boolean logging = sharedPref.getBoolean(getString(R.string.logging), false);
-        inChairSwitch = (Switch) findViewById(R.id.switch1);
-        boolean logging = false;
-        inChairSwitch.setChecked(logging);
-        inChairSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+    protected void initSwitches() {
+        loggingSwitch = (Switch) findViewById(R.id.switch1);
+        loggingSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 MainActivity.this.updateLoggingStatus(isChecked);
             }
         });
 
+        classifySwitch = (Switch) findViewById(R.id.classifySwitch);
+        classifySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                MainActivity.this.classify = isChecked;
+            }
+        });
     }
 }
 

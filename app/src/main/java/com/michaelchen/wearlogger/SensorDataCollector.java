@@ -19,12 +19,11 @@ import java.io.IOException;
  */
 public class SensorDataCollector implements SensorEventListener {
     private FileOutputStream toUpdate;
-    public static final String EXTERN_FILE_NAME_LINEAR = "gestureAuthLinear.log";
-    public static final String EXTERN_FILE_NAME_GYRO = "gestureAuthGyro.log";
-    public static final String EXTERN_FILE_NAME_ACCEL = "gestureAuthAccel.log";
-    public static final String EXTERN_FILE_NAME_DEFAULT = "gestureAuthDefault.log";
-    public static final String START = ">>>>> ";
-    public static final String END = "<<<<< ";
+    public static final String EXTERN_FILE_NAME_LINEAR = "gestureAuthLinear";
+    public static final String EXTERN_FILE_NAME_GYRO = "gestureAuthGyro";
+    public static final String EXTERN_FILE_NAME_ACCEL = "gestureAuthAccel";
+    public static final String EXTERN_FILE_NAME_DEFAULT = "gestureAuthDefault";
+
     private File file;
     private int count = 0;
     private Activity activity;
@@ -33,12 +32,12 @@ public class SensorDataCollector implements SensorEventListener {
     public static final String TAG = "SensorDataCollector";
 
     private TextView update;
+    private String fileName;
+    private String baseFileName;
+    private int counter;
 
-    public SensorDataCollector(Activity a, TextView tv, int sensorType) {
+    public SensorDataCollector(Activity a, int sensorType, int counter) {
         this.activity = a;
-        update = tv;
-
-        String fileName;
         switch(sensorType) {
             case Sensor.TYPE_ACCELEROMETER:
                 fileName = EXTERN_FILE_NAME_ACCEL;
@@ -52,6 +51,10 @@ public class SensorDataCollector implements SensorEventListener {
             default:
                 fileName = EXTERN_FILE_NAME_DEFAULT;
         }
+
+        this.counter = counter;
+        baseFileName = fileName;
+        fileName = baseFileName + Integer.toString(counter);
 
         file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
         if (!file.exists()) {
