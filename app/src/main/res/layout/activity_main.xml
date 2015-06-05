@@ -13,28 +13,30 @@
         android:padding="5dp"
         app:layout_box="all">
 
+
         <Switch
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Log"
             android:id="@+id/switch1"
-            android:layout_gravity="right|top"
+            android:layout_gravity="left|top"
             android:elevation="@dimen/card_content_padding_rect_top"/>
 
-        <TextView
+        <Switch
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sensor Output"
-            android:id="@+id/textViewSensor"
-            android:layout_gravity="center" />
+            android:text="Classify"
+            android:id="@+id/classifySwitch"
+            android:layout_gravity="left|center_vertical"
+            android:checked="false" />
 
-        <Button
+        <CheckBox
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Reset"
-            android:id="@+id/button"
-            android:layout_gravity="center_horizontal|bottom"
-            android:onClick="onResetClicked"/>
+            android:text="Correct"
+            android:id="@+id/checkBoxCorrect"
+            android:layout_gravity="left|bottom"
+            android:checked="true" />
 
     </FrameLayout>
 </android.support.wearable.view.BoxInsetLayout>

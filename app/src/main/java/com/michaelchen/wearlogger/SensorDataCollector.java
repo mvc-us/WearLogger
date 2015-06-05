@@ -1,6 +1,5 @@
 package com.michaelchen.wearlogger;
 
-import android.app.Activity;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -23,10 +22,9 @@ public class SensorDataCollector implements SensorEventListener {
     public static final String EXTERN_FILE_NAME_GYRO = "gestureAuthGyro";
     public static final String EXTERN_FILE_NAME_ACCEL = "gestureAuthAccel";
     public static final String EXTERN_FILE_NAME_DEFAULT = "gestureAuthDefault";
+    public static final String EXTERN_FILE_SUFFIX_CLASSIFY = ".classify";
 
     private File file;
-    private int count = 0;
-    private Activity activity;
     private BufferedWriter buf;
 
     public static final String TAG = "SensorDataCollector";
@@ -35,9 +33,14 @@ public class SensorDataCollector implements SensorEventListener {
     private String fileName;
     private String baseFileName;
     private int counter;
+    private boolean logging = false;
 
-    public SensorDataCollector(Activity a, int sensorType, int counter) {
-        this.activity = a;
+    /**
+     *
+     * @param sensorType
+     * @param counter number of items in dataset PRIOR to this one
+     */
+    public SensorDataCollector(int sensorType, int counter) {
         switch(sensorType) {
             case Sensor.TYPE_ACCELEROMETER:
                 fileName = EXTERN_FILE_NAME_ACCEL;
@@ -55,39 +58,15 @@ public class SensorDataCollector implements SensorEventListener {
         this.counter = counter;
         baseFileName = fileName;
         fileName = baseFileName + Integer.toString(counter);
-
-        file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                Log.e("SensorDataCollector", "failed to make file", e);
-            }
-        }
-
-        try {
-            buf = new BufferedWriter(new FileWriter(file, true));
-        } catch (IOException e) {
-            Log.e("SensorDataCollector", "unable to create buffer", e);
-        }
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        final String text = appendStorage(event.sensor.getName(), event.values, event.accuracy, event.timestamp);
-        if (count % 21 == 0) {
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    SensorDataCollector.this.update.setText(text);
-                }
-            });
-        }
-        count++;
+        if (logging) appendStorage(event.sensor.getName(), event.values, event.accuracy, event.timestamp);
     }
 
     public void flushBuffer() {
-        if (buf != null) {
+        if (logging && buf != null) {
             try {
                 buf.flush();
             } catch (IOException e) {
@@ -102,27 +81,34 @@ public class SensorDataCollector implements SensorEventListener {
     }
 
     void endLog() {
+        if (!logging) return;
         flushBuffer();
-        if (buf != null) {
-            try {
-                buf.append(END + System.currentTimeMillis());
-                buf.newLine();
-                buf.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        logging = false;
+        try {
+            buf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    void startLog() {
-        if (buf != null) {
+    void startLog(boolean classify) {
+        counter++;
+        fileName = classify ? baseFileName + EXTERN_FILE_SUFFIX_CLASSIFY : baseFileName + Integer.toString(counter);
+        file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
+        if (!file.exists()) {
             try {
-                buf.append(START + System.currentTimeMillis());
-                buf.newLine();
+                file.createNewFile();
             } catch (IOException e) {
-                e.printStackTrace();
+                Log.e("SensorDataCollector", "failed to make file", e);
             }
         }
+
+        try {
+            buf = new BufferedWriter(new FileWriter(file, true));
+        } catch (IOException e) {
+            Log.e("SensorDataCollector", "unable to create buffer", e);
+        }
+        logging = true;
     }
 
     void clearFile() {
