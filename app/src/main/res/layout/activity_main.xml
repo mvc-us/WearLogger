@@ -38,5 +38,16 @@
             android:layout_gravity="left|bottom"
             android:checked="true" />
 
+        <Button
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CType"
+            android:id="@+id/toggleButton"
+            android:layout_gravity="right|top"
+            android:checked="false"
+            android:onClick="classifyTypeClicked"/>
+
+
     </FrameLayout>
 </android.support.wearable.view.BoxInsetLayout>

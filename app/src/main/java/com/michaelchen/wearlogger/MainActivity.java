@@ -1,20 +1,20 @@
 package com.michaelchen.wearlogger;
 
-import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.wearable.activity.WearableActivity;
+import android.support.wearable.view.WearableListView;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.Toast;
-
-import com.Knn;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -23,13 +23,15 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
-public class MainActivity extends Activity {
+public class MainActivity extends WearableActivity {
 
     static final String PREF_FILE_KEY = "stored_preferences";
     private static final String PREF_NUM_TRAINING_POINTS = "num_training_points";
     public static final String EXTERN_FILE_NAME_BOOLS = "gestureAuthBools";
+    public static final String TAG = "main activity";
 
-    public static final int k = 3;
+
+    static final int CLASS_LIST_SELECT_CODE = 1;
 
     public static final int[] TARGET_SENSORS = {
             Sensor.TYPE_LINEAR_ACCELERATION,
@@ -44,20 +46,24 @@ public class MainActivity extends Activity {
     private File boolFile;
     private BufferedWriter boolBuf;
     private CheckBox isCorrectBox;
+    private int gestureType = 0;
+
+    private WearableListView mListView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        numTrainingPoints = getSharedPreferences(PREF_FILE_KEY, MODE_PRIVATE).getInt(PREF_NUM_TRAINING_POINTS, 0);
-        for (int i = 0; i < TARGET_SENSORS.length; i++) {
-            SensorDataCollector sensorEventListener = new SensorDataCollector(TARGET_SENSORS[i], numTrainingPoints);
-            sensorEventListeners[i] = sensorEventListener;
-        }
+        setAmbientEnabled();
         classify = false;
         initSwitches();
         initBoolBuf();
         isCorrectBox = (CheckBox) findViewById(R.id.checkBoxCorrect);
+
+        for (int i = 0; i < TARGET_SENSORS.length; i++) {
+            SensorDataCollector sensorEventListener = new SensorDataCollector(TARGET_SENSORS[i], numTrainingPoints);
+            sensorEventListeners[i] = sensorEventListener;
+        }
     }
 
     @Override
@@ -87,10 +93,15 @@ public class MainActivity extends Activity {
         stopLogging();
     }
 
+    /**
+     * Note: this can also change numTrainingPoints
+     */
     private void initBoolBuf() {
+        numTrainingPoints = getSharedPreferences(PREF_FILE_KEY, MODE_PRIVATE).getInt(PREF_NUM_TRAINING_POINTS, 0);
         boolFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), EXTERN_FILE_NAME_BOOLS);
         if (!boolFile.exists()) {
             numTrainingPoints = 0; // shortcut to quickly reset: just delete bool file, plus we have no info here
+            updatePref(PREF_NUM_TRAINING_POINTS, numTrainingPoints);
             try {
                 boolFile.createNewFile();
             } catch (IOException e) {
@@ -142,7 +153,29 @@ public class MainActivity extends Activity {
                     File toClassify = new File(Environment.getExternalStoragePublicDirectory(
                             Environment.DIRECTORY_DOWNLOADS),
                             SensorDataCollector.EXTERN_FILE_NAME_LINEAR + SensorDataCollector.EXTERN_FILE_SUFFIX_CLASSIFY);
-                    Knn classifier = new Knn(trainingFiles, trainingBools, k);
+                    GestureClassifier classifier = null;
+                    switch(gestureType) {
+                        case 0:
+                            classifier = new KnnClassifier(trainingFiles, trainingBools);
+                            break;
+                        case 1:
+                            classifier = new DistanceClassifier(trainingFiles, trainingBools);
+                            break;
+                        case 2:
+                            classifier = new BufferedDistanceClassifier(trainingFiles, trainingBools);
+                            break;
+                    }
+
+                    if (classifier == null) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "Unknown classifier", Toast.LENGTH_LONG).show();
+                            }
+                        });
+                        return;
+                    }
+
                     final boolean good = classifier.classify(toClassify);
                     runOnUiThread(new Runnable() {
                         @Override
@@ -225,6 +258,16 @@ public class MainActivity extends Activity {
                 MainActivity.this.classify = isChecked;
             }
         });
+    }
+
+    public void classifyTypeClicked(View v) {
+        Intent intent = new Intent(this, ClassSelectorActivity.class);
+        startActivityForResult(intent, CLASS_LIST_SELECT_CODE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(TAG, "GestureType:" + ClassSelectorActivity.classMethods.get(resultCode));
     }
 }
 

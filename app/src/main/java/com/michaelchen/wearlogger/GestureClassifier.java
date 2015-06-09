@@ -1,4 +1,4 @@
-package com;
+package com.michaelchen.wearlogger;
 
 import com.dtw.FastDTW;
 import com.timeseries.TimeSeries;
@@ -6,21 +6,17 @@ import com.util.DistanceFunction;
 import com.util.DistanceFunctionFactory;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.HashMap;
 
 /**
- * Created by michael on 5/31/15.
+ * Created by michael on 6/7/15.
  */
-public class Knn {
-    private TimeSeries[] trainingSet;
-    private int k;
-    private boolean[] positive; // true if is actual wanted gesture
+public abstract class GestureClassifier {
+    protected TimeSeries[] trainingSet;
+    protected boolean[] positive; // true if is actual wanted gesture
     private static final int[] COL_TO_INCLUDE = {0,1,2,3};
     public static final int RADIUS = 20;
 
-    public Knn (File[] trainingSetFiles, boolean[] positive, int k) {
-        this.k = k;
+    public GestureClassifier(File[] trainingSetFiles, boolean[] positive) {
         trainingSet = new TimeSeries[trainingSetFiles.length];
         for(int i = 0; i < trainingSetFiles.length; i++) {
             File file = trainingSetFiles[i];
@@ -29,7 +25,10 @@ public class Knn {
         }
         this.positive = new boolean[positive.length];
         System.arraycopy(positive, 0, this.positive, 0, positive.length);
+        initialize();
     }
+
+    abstract void initialize();
 
     public boolean classify(File file) {
         TimeSeries t = new TimeSeries(file, COL_TO_INCLUDE, true, false, ',');
@@ -38,28 +37,8 @@ public class Knn {
         for (int i = 0; i < trainingSet.length; i++) {
             distances[i] = FastDTW.getWarpDistBetween(t, trainingSet[i], RADIUS, distFn);
         }
-
-        HashMap<Double, Integer> distanceToIndex = new HashMap<>(distances.length);
-        for (int i = 0; i < distances.length; i++) {
-            distanceToIndex.put(distances[i], i);
-        }
-
-        double[] closest = findKSmallest(distances, k);
-        int countTrue = 0;
-
-        for (double distance : closest) {
-            int index = distanceToIndex.get(distance);
-            countTrue += positive[index] ? 1 : 0;
-        }
-
-        return countTrue > (k/2); // if requires strong majority, if k is even, equal does not pass
+        return runClassification(t, distances);
     }
 
-    private static double[] findKSmallest(double[] data, int k) {
-        assert k > 0;
-        assert k <= data.length;
-        double[] dataCopy = data.clone();
-        Arrays.sort(dataCopy);
-        return Arrays.copyOfRange(dataCopy, 0, k);
-    }
+    public abstract boolean runClassification(TimeSeries toEval, final double[] distances);
 }
