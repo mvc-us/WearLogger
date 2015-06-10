@@ -1,0 +1,13 @@
+Gesture Auth
+
+Testing app for authentication on Android Wear using gestures/accelerometers.
+Currently using the linear acceleration sensor.
+
+Usage: CTYPE selector: select the classification algorithm used
+Log switch: begin/end logging
+Classification switch: off for adding to training set, on to classify new data point
+Corrent: whether or not a new training point is correct
+
+To add a new data point: check Correct checkbox if point is correct, switch log to on, perform gesture, then turn log off
+
+To classify a new point: switch classify to on, swtich log to on, perform gesture, switch log off

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">WearLogger</string>
+    <string name="app_name">Gesture Auth</string>
     <string name="hello_round">Hello Round World!</string>
     <string name="hello_square">Hello Square World!</string>
     <string name="title_activity_class_selector">ClassSelectorActivity</string>
